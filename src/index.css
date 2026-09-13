@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+
+:root {
+  --primary-color: #A3D9A5; /* 나뭇잎 초록색 */
+  --secondary-color: #EED2AA; /* 버섯/나무 색상 */
+  --accent-color: #FFB347; /* 도토리 주황색 */
+  --text-color: #5C4033; /* 짙은 갈색 */
+  --bg-color: #FDF9F1; /* 부드러운 크림 배경 */
+  --danger-color: #FF6B6B;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Jua', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Button Base Styles */
+button {
+  font-family: 'Jua', sans-serif;
+  cursor: pointer;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-size: 1.1rem;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+.btn-primary {
+  background-color: var(--accent-color);
+  color: white;
+  box-shadow: 0 4px 0 #cc8819;
+}
+
+.btn-primary:active {
+  box-shadow: 0 0 0 transparent;
+  transform: translateY(4px);
+}
