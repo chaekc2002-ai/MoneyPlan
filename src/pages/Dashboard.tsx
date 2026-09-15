@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useAppStore } from '../store';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Home, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -23,66 +23,61 @@ export const Dashboard = () => {
     });
   }, [store.logs, year, month]);
 
-  const totalIncome = monthlyLogs.filter(l => l.type === 'income').reduce((acc, l) => acc + l.amount, 0);
-  const totalExpense = monthlyLogs.filter(l => l.type === 'expense').reduce((acc, l) => acc + l.amount, 0);
-  
-  // Total balance across ALL time
-  const totalBalance = store.logs.reduce((acc, log) => 
-    log.type === 'income' ? acc + log.amount : acc - log.amount
-  , 0);
+  const totalIncome = monthlyLogs
+    .filter(log => log.type === 'income')
+    .reduce((acc, log) => acc + log.amount, 0);
 
-  const nextMonth = () => {
-    const next = new Date(currentDate);
-    next.setMonth(next.getMonth() + 1);
-    setCurrentDate(next);
-  };
+  const totalExpense = monthlyLogs
+    .filter(log => log.type === 'expense')
+    .reduce((acc, log) => acc + log.amount, 0);
 
-  const prevMonth = () => {
-    const prev = new Date(currentDate);
-    prev.setMonth(prev.getMonth() - 1);
-    setCurrentDate(prev);
-  };
-
-  // Group expenses by category
-  const expenseData = useMemo(() => {
-    const expenses = monthlyLogs.filter(l => l.type === 'expense');
-    const grouped = expenses.reduce((acc, log) => {
-      acc[log.description] = (acc[log.description] || 0) + log.amount;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    return Object.entries(grouped).map(([name, value]) => ({ name, value }));
+  const expenseByCategory = useMemo(() => {
+    const acc: Record<string, number> = {};
+    monthlyLogs
+      .filter(log => log.type === 'expense')
+      .forEach(log => {
+        acc[log.description] = (acc[log.description] || 0) + log.amount;
+      });
+    return acc;
   }, [monthlyLogs]);
+
+  const expenseData = Object.entries(expenseByCategory).map(([name, value]) => ({
+    name,
+    value
+  }));
+
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(year, month - 2, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(year, month, 1));
+  };
 
   return (
     <div style={{ padding: 20, maxWidth: 600, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>용돈 대시보드 📊</h2>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <div style={{ textAlign: 'right', marginRight: 10 }}>
-            <div style={{ fontSize: '0.8rem', color: '#666' }}>내 지갑 잔액</div>
-            <div style={{ fontWeight: 'bold', color: 'var(--text-color)', fontSize: '1.2rem' }}>{totalBalance.toLocaleString()}원</div>
-          </div>
+        <h2>📊 용돈 보고서</h2>
+        <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn-primary" onClick={() => navigate('/record')} style={{ padding: '8px 10px', display: 'flex', alignItems: 'center' }}><BookOpen size={16}/></button>
           <button className="btn-primary" onClick={() => navigate('/treehouse')} style={{ padding: '8px 10px', display: 'flex', alignItems: 'center' }}><Home size={16}/></button>
         </div>
       </div>
-      
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 30 }}>
-        <button onClick={prevMonth} style={{ background: 'transparent', padding: 10, cursor: 'pointer' }}><ChevronLeft size={24}/></button>
-        <h3 style={{ fontSize: '1.5rem', color: 'var(--text-color)' }}>{year}년 {month}월</h3>
-        <button onClick={nextMonth} style={{ background: 'transparent', padding: 10, cursor: 'pointer' }}><ChevronRight size={24}/></button>
+
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, marginTop: 20 }}>
+        <button onClick={handlePrevMonth} style={{ background: 'transparent', color: 'var(--text-color)', padding: 5 }}><ChevronLeft size={24}/></button>
+        <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{year}년 {month}월</span>
+        <button onClick={handleNextMonth} style={{ background: 'transparent', color: 'var(--text-color)', padding: 5 }}><ChevronRight size={24}/></button>
       </div>
 
-      <div style={{ display: 'flex', gap: 20, marginTop: 20 }}>
-        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} style={{ flex: 1, background: 'white', padding: 20, borderRadius: 16, textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-          <div style={{ color: '#4CAF50', fontWeight: 'bold', marginBottom: 10, fontSize: '1.1rem' }}>수입 💰</div>
-          <div style={{ fontSize: '1.5rem', color: 'var(--text-color)' }}>{totalIncome.toLocaleString()}원</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginTop: 20 }}>
+        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} style={{ background: 'white', padding: 20, borderRadius: 16, textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+          <div style={{ color: '#4CAF50', marginBottom: 5 }}>총 수입</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>+{totalIncome.toLocaleString()}원</div>
         </motion.div>
-        
-        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} style={{ flex: 1, background: 'white', padding: 20, borderRadius: 16, textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-          <div style={{ color: '#FF6B6B', fontWeight: 'bold', marginBottom: 10, fontSize: '1.1rem' }}>지출 🛒</div>
-          <div style={{ fontSize: '1.5rem', color: 'var(--text-color)' }}>{totalExpense.toLocaleString()}원</div>
+        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} style={{ background: 'white', padding: 20, borderRadius: 16, textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+          <div style={{ color: '#FF6B6B', marginBottom: 5 }}>총 지출</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>-{totalExpense.toLocaleString()}원</div>
         </motion.div>
       </div>
 
@@ -97,16 +92,16 @@ export const Dashboard = () => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                   outerRadius={100}
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {expenseData.map((entry, index) => (
+                  {expenseData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => `${value.toLocaleString()}원`} />
+                <Tooltip formatter={(value: any) => `${Number(value || 0).toLocaleString()}원`} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>

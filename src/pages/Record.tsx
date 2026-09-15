@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppStore, type LogItem } from '../store';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, Edit2, Home, PieChart } from 'lucide-react';
+import { Trash2, Edit2, Home, PieChart, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const INCOME_CATEGORIES = ['정기용돈', '심부름', '용돈보너스', '기타수입'];
@@ -11,6 +11,11 @@ export const Record = () => {
   const store = useAppStore();
   const navigate = useNavigate();
   
+  // 최초 진입 시 구글 시트와 동기화 시도
+  useEffect(() => {
+    store.syncWithGoogleSheets();
+  }, []);
+
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [amount, setAmount] = useState('');
@@ -73,16 +78,26 @@ export const Record = () => {
           <img src="/src/assets/squirrel_character.png" alt="Squirrel" style={{ width: 40 }} />
           용돈 기록장
         </h2>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <div style={{ textAlign: 'right', marginRight: 10 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ textAlign: 'right', marginRight: 8 }}>
             <div style={{ fontSize: '0.8rem', color: '#666' }}>내 지갑 잔액</div>
             <div style={{ fontWeight: 'bold', color: 'var(--text-color)', fontSize: '1.2rem' }}>{balance.toLocaleString()}원</div>
           </div>
-          <span style={{ fontWeight: 'bold', color: 'var(--accent-color)' }}>🌰 {store.acorns}개</span>
+          <span style={{ fontWeight: 'bold', color: 'var(--accent-color)', fontSize: '0.95rem' }}>🌰 {store.acorns}개</span>
+          <button 
+            className="btn-primary" 
+            title="구글 시트와 동기화" 
+            onClick={() => store.syncWithGoogleSheets()} 
+            disabled={store.isSyncing}
+            style={{ padding: '8px 10px', display: 'flex', alignItems: 'center' }}
+          >
+            <RefreshCw size={16} className={store.isSyncing ? 'spin' : ''} style={{ animation: store.isSyncing ? 'spin 1s linear infinite' : 'none' }} />
+          </button>
           <button className="btn-primary" onClick={() => navigate('/dashboard')} style={{ padding: '8px 10px', display: 'flex', alignItems: 'center' }}><PieChart size={16}/></button>
           <button className="btn-primary" onClick={() => navigate('/treehouse')} style={{ padding: '8px 10px', display: 'flex', alignItems: 'center' }}><Home size={16}/></button>
         </div>
       </div>
+
       
       <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20, background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
         <div style={{ display: 'flex', gap: 10 }}>
