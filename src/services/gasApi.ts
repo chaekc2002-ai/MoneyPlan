@@ -69,9 +69,9 @@ export const gasApi = {
     }
   },
 
-  async deleteLog(id: string, token: string): Promise<boolean> {
+  async deleteLog(id: string, studentId: string, token: string): Promise<boolean> {
     try {
-      const data = await post({ action: 'delete', id, token });
+      const data = await post({ action: 'delete', id, studentId, token });
       return data.status === 'success';
     } catch (err) {
       console.warn('[GAS API] Failed to delete log:', err);
