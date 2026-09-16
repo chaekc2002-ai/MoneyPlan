@@ -10,10 +10,13 @@ const EXPENSE_CATEGORIES = ['간식', '학용품', '장난감/게임', '기타�
 export const Record = () => {
   const store = useAppStore();
   const navigate = useNavigate();
+  const [syncError, setSyncError] = useState('');
   
-  // 최초 진입 시 구글 시트와 동기화 시도
+  // 최초 진입 시 로그인한 학생의 기록만 동기화한다.
   useEffect(() => {
-    store.syncWithGoogleSheets();
+    void store.syncWithGoogleSheets().catch((err) => {
+      setSyncError(err instanceof Error ? err.message : '기록을 불러오지 못했습니다.');
+    });
   }, []);
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -30,29 +33,33 @@ export const Record = () => {
   // 날짜 기준 내림차순 정렬
   const sortedLogs = [...store.logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !desc || !date) return;
-    
-    if (editingId) {
-      store.editLog({
-        id: editingId,
-        date,
-        type,
-        amount: Number(amount),
-        description: desc
-      });
-      setEditingId(null);
-    } else {
-      store.addLog({
-        date,
-        type,
-        amount: Number(amount),
-        description: desc
-      });
+    setSyncError('');
+    try {
+      if (editingId) {
+        await store.editLog({
+          id: editingId,
+          date,
+          type,
+          amount: Number(amount),
+          description: desc
+        });
+        setEditingId(null);
+      } else {
+        await store.addLog({
+          date,
+          type,
+          amount: Number(amount),
+          description: desc
+        });
+      }
+      setAmount('');
+      setDesc('');
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : '기록을 저장하지 못했습니다.');
     }
-    setAmount('');
-    setDesc('');
   };
 
   const startEdit = (log: LogItem) => {
@@ -63,9 +70,14 @@ export const Record = () => {
     setDesc(log.description);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('정말 이 기록을 지울까요?')) {
-      store.deleteLog(id);
+      setSyncError('');
+      try {
+        await store.deleteLog(id);
+      } catch (err) {
+        setSyncError(err instanceof Error ? err.message : '기록을 삭제하지 못했습니다.');
+      }
     }
   };
 
@@ -74,16 +86,20 @@ export const Record = () => {
   return (
     <div style={{ padding: 20, maxWidth: 600, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src="/src/assets/squirrel_character.png" alt="Squirrel" style={{ width: 40 }} />
-          용돈 기록장
-        </h2>
+        <div>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <img src="/src/assets/squirrel_character.png" alt="Squirrel" style={{ width: 40 }} />
+            용돈 기록장
+          </h2>
+          <div style={{ fontSize: '0.9rem', color: '#666' }}>{store.user?.nickname}의 기록</div>
+        </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <div style={{ textAlign: 'right', marginRight: 8 }}>
             <div style={{ fontSize: '0.8rem', color: '#666' }}>내 지갑 잔액</div>
             <div style={{ fontWeight: 'bold', color: 'var(--text-color)', fontSize: '1.2rem' }}>{balance.toLocaleString()}원</div>
           </div>
           <span style={{ fontWeight: 'bold', color: 'var(--accent-color)', fontSize: '0.95rem' }}>🌰 {store.acorns}개</span>
+          <button onClick={() => { store.logout(); navigate('/'); }} style={{ padding: '8px 10px', background: '#888' }}>로그아웃</button>
           <button 
             className="btn-primary" 
             title="구글 시트와 동기화" 
@@ -98,6 +114,7 @@ export const Record = () => {
         </div>
       </div>
 
+      {syncError && <div role="alert" style={{ marginTop: 12, color: 'var(--danger-color)' }}>{syncError}</div>}
       
       <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20, background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
         <div style={{ display: 'flex', gap: 10 }}>
