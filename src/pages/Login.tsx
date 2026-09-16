@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '../store';
+import { gasApi } from '../services/gasApi';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const TutorialPopup = ({ onClose }: { onClose: () => void }) => {
@@ -43,11 +44,25 @@ export const Login = () => {
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const login = useAppStore(state => state.login);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (nickname.trim()) {
-      login(nickname);
+    const cleanNickname = nickname.trim();
+    if (!cleanNickname || !password) {
+      setError('닉네임과 비밀번호를 모두 입력해 주세요.');
+      return;
+    }
+    setError('');
+    setIsSubmitting(true);
+    try {
+      const user = await gasApi.login(cleanNickname, password);
+      login(user);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '로그인하지 못했습니다.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -90,8 +105,9 @@ export const Login = () => {
               fontFamily: 'Jua, sans-serif', fontSize: '1rem', outline: 'none'
             }}
           />
-          <button type="submit" className="btn-primary" style={{ marginTop: '10px' }}>
-            입장하기
+          {error && <div role="alert" style={{ color: 'var(--danger-color)', fontSize: '0.9rem' }}>{error}</div>}
+          <button type="submit" className="btn-primary" disabled={isSubmitting} style={{ marginTop: '10px', opacity: isSubmitting ? 0.7 : 1 }}>
+            {isSubmitting ? '확인 중...' : '입장하기'}
           </button>
         </form>
       </motion.div>
