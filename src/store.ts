@@ -89,7 +89,7 @@ export const useAppStore = create<AppStore>()(
         set((state) => ({
           logs: state.logs.filter(log => log.id !== id)
         }));
-        const deleted = await gasApi.deleteLog(id, user.token);
+        const deleted = await gasApi.deleteLog(id, user.id, user.token);
         if (!deleted) throw new Error('시트의 기록을 삭제하지 못했습니다. 다시 시도해 주세요.');
       },
       syncWithGoogleSheets: async () => {
