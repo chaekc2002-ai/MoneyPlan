@@ -60,7 +60,7 @@ function getLogs(request) {
       studentId: String(row[1]),
       date: formatDate(row[3], timezone),
       type: String(row[4]),
-      amount: Number(row[5]),
+      amount: parseAmount(row[5]),
       description: String(row[6]),
     }));
   return json({ status: 'success', logs: result });
@@ -76,7 +76,11 @@ function addLog(request) {
   if (findLogRow(logs, log.id, student.studentId) !== -1) {
     throw new Error('이미 저장된 기록입니다.');
   }
+  const rowNum = logs.getLastRow() + 1;
   logs.appendRow([log.id, student.studentId, student.nickname, log.date, log.type, Number(log.amount), log.description, new Date()]);
+  try {
+    logs.getRange(rowNum, 6).setNumberFormat('0');
+  } catch (e) {}
   return json({ status: 'success' });
 }
 
@@ -90,6 +94,9 @@ function editLog(request) {
   const row = findLogRow(logs, log.id, student.studentId);
   if (row === -1) throw new Error('수정할 기록을 찾지 못했습니다.');
   logs.getRange(row, 4, 1, 4).setValues([[log.date, log.type, Number(log.amount), log.description]]);
+  try {
+    logs.getRange(row, 6).setNumberFormat('0');
+  } catch (e) {}
   return json({ status: 'success' });
 }
 
@@ -125,6 +132,22 @@ function validateLog(log) {
   }
 }
 
+function parseAmount(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  // 시트 서식이 날짜로 잘못 지정되어 Date 객체로 읽힌 경우, 시트의 날짜 일련번호(원래 금액 숫자)로 복원
+  if (Object.prototype.toString.call(val) === '[object Date]' && !isNaN(val.getTime())) {
+    const sheetEpoch = new Date(1899, 11, 30);
+    return Math.round((val.getTime() - sheetEpoch.getTime()) / 86400000);
+  }
+  if (typeof val === 'string') {
+    const cleaned = val.replace(/[^0-9.-]/g, '');
+    const num = Number(cleaned);
+    return isNaN(num) ? 0 : num;
+  }
+  const num = Number(val);
+  return isNaN(num) ? 0 : num;
+}
+
 function getSpreadsheet() {
   const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
   return spreadsheetId ? SpreadsheetApp.openById(spreadsheetId) : SpreadsheetApp.getActiveSpreadsheet();
@@ -142,15 +165,22 @@ function ensureLogSheet() {
   const sheet = spreadsheet.getSheetByName('Logs') || spreadsheet.insertSheet('Logs');
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(LOG_HEADERS);
+    try { sheet.getRange('F:F').setNumberFormat('0'); } catch (e) {}
     return sheet;
   }
 
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
   if (headers.indexOf('StudentID') === -1) {
-    // 기존 [ID, Date, Type, Amount, Description, Timestamp] 행을 보존하면서 두 열을 삽입한다.
     sheet.insertColumnsAfter(1, 2);
     sheet.getRange(1, 1, 1, LOG_HEADERS.length).setValues([LOG_HEADERS]);
   }
+  // Amount(F열)의 서식을 숫자로 강제 교정
+  try {
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      sheet.getRange(2, 6, lastRow - 1, 1).setNumberFormat('0');
+    }
+  } catch (e) {}
   return sheet;
 }
 
